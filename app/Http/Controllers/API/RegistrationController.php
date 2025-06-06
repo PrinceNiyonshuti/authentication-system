@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Models\Otp;
 use App\Data\AddressData;
+use Illuminate\Http\Request;
 use App\Models\TemporaryUser;
 use App\Data\PersonalInfoData;
 use libphonenumber\PhoneNumberUtil;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Mail;
 use libphonenumber\PhoneNumberFormat;
 use App\Http\Requests\Step2AddressRequest;
 use App\Http\Requests\Step1PersonalInfoRequest;
@@ -83,4 +86,72 @@ class RegistrationController extends Controller
             'is_expatriate' => $user->is_expatriate,
         ], 200);
     }
+
+    // send otp code
+    public function sendOtp(Request $request)
+    {
+        try {
+            $request->validate([
+                'registration_id' => 'required|uuid|exists:temporary_users,id'
+            ]);
+
+            $user = TemporaryUser::findOrFail($request->registration_id);
+            $otpCode = random_int(100000, 999999);
+
+            Otp::create([
+                'temporary_user_id' => $user->id,
+                'code' => $otpCode,
+                'expires_at' => now()->addMinutes(10),
+            ]);
+
+            Mail::send('emails.otp', ['user' => $user, 'otpCode' => $otpCode], function ($message) use ($user) {
+                $message->to($user->email)
+                        ->subject('Your OTP Verification Code');
+            });
+
+            return response()->json(['message' => 'OTP sent successfully.']);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Server Error',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'registration_id' => 'required|uuid|exists:temporary_users,id',
+            'otp_code' => 'required|digits:6',
+        ]);
+
+        $otp = Otp::where('temporary_user_id', $request->registration_id)
+                ->where('code', $request->otp_code)
+                ->where('is_used', false)
+                ->where('expires_at', '>', now())
+                ->latest()
+                ->first();
+
+        if (!$otp) {
+            return response()->json(['message' => 'Invalid or expired OTP.'], 422);
+        }
+
+        $otp->update(['is_used' => true]);
+
+        $user = $otp->user;
+        $user->update([
+            'otp_verified' => true,
+            'current_step' => 3,
+        ]);
+
+        return response()->json([
+            'message' => 'OTP verified successfully.',
+            'registration_id' => $user->id,
+            'current_step' => $user->current_step,
+        ]);
+    }
+
+
 }
