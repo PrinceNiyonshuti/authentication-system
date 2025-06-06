@@ -40,4 +40,10 @@ class TemporaryUser extends Model
             $model->id = (string) Str::uuid();
         });
     }
+
+    public function otps()
+    {
+        return $this->hasMany(Otp::class, 'temporary_user_id');
+    }
+
 }
