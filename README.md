@@ -23,7 +23,7 @@ This project is a secure, API-only Laravel 12 backend for a user authentication 
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/your-repo/authentication-system.git
+git clone https://github.com/PrinceNiyonshuti/authentication-system
 cd authentication-system
 ```
 
