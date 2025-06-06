@@ -30,6 +30,7 @@ class TemporaryUser extends Model
         'apartment_name',
         'room_number',
         'is_expatriate',
+        'password',
     ];
 
     protected static function boot()
