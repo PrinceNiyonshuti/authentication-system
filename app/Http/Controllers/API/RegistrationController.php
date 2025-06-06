@@ -10,8 +10,10 @@ use App\Data\PersonalInfoData;
 use libphonenumber\PhoneNumberUtil;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Hash;
 use libphonenumber\PhoneNumberFormat;
 use App\Http\Requests\Step2AddressRequest;
+use App\Http\Requests\Step4PasswordRequest;
 use App\Http\Requests\Step1PersonalInfoRequest;
 
 class RegistrationController extends Controller
@@ -148,6 +150,34 @@ class RegistrationController extends Controller
 
         return response()->json([
             'message' => 'OTP verified successfully.',
+            'registration_id' => $user->id,
+            'current_step' => $user->current_step,
+        ]);
+    }
+
+    public function step4(Step4PasswordRequest $request)
+    {
+        $user = TemporaryUser::findOrFail($request->registration_id);
+        
+        $otp = Otp::where('temporary_user_id', $user->id)
+                ->where('is_used', true)
+                ->where('expires_at', '>', now())
+                ->latest()
+                ->first();
+
+        if (!$otp || $user->current_step !== 3) {
+            return response()->json([
+                'message' => 'You must complete OTP verification before setting a password.'
+            ], 403);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password),
+            'current_step' => 4,
+        ]);
+
+        return response()->json([
+            'message' => 'Password set successfully.',
             'registration_id' => $user->id,
             'current_step' => $user->current_step,
         ]);
