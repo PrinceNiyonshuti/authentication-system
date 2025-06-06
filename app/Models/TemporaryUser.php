@@ -24,6 +24,12 @@ class TemporaryUser extends Model
         'nationality',
         'profile_picture',
         'current_step',
+        'country_of_residence',
+        'city',
+        'postal_code',
+        'apartment_name',
+        'room_number',
+        'is_expatriate',
     ];
 
     protected static function boot()
