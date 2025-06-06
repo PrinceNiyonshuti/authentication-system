@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Otp;
+use App\Models\User;
 use App\Data\AddressData;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\TemporaryUser;
 use App\Data\PersonalInfoData;
@@ -158,7 +160,7 @@ class RegistrationController extends Controller
     public function step4(Step4PasswordRequest $request)
     {
         $user = TemporaryUser::findOrFail($request->registration_id);
-        
+
         $otp = Otp::where('temporary_user_id', $user->id)
                 ->where('is_used', true)
                 ->where('expires_at', '>', now())
@@ -183,5 +185,76 @@ class RegistrationController extends Controller
         ]);
     }
 
+    public function step5_review(string $registration_id)
+    {
+        $user = TemporaryUser::find($registration_id);
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'No information found for the provided registration ID.',
+            ], 404);
+        }else
+
+        return response()->json([
+            'registration_id' => $user->id,
+            'current_step' => $user->current_step,
+            'review' => [
+                'honorific_title' => $user->honorific_title,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'gender' => $user->gender,
+                'date_of_birth' => $user->date_of_birth,
+                'email' => $user->email,
+                'phone_number' => $user->phone_number,
+                'nationality' => $user->nationality,
+                'country_of_residence' => $user->country_of_residence,
+                'city' => $user->city,
+                'postal_code' => $user->postal_code,
+                'profile_picture_url' => $user->profile_picture_url ?? null,
+            ]
+        ]);
+    }
+
+
+
+    public function step5_confirm(Request $request)
+    {
+        $request->validate([
+            'registration_id' => 'required|uuid|exists:temporary_users,id'
+        ]);
+
+        $tempUser = TemporaryUser::findOrFail($request->registration_id);
+
+        if ($tempUser->current_step !== 4 || !$tempUser->password) {
+            return response()->json([
+                'message' => 'Complete all steps before final submission.'
+            ], 403);
+        }
+
+        // Create real user
+        $user = User::create([
+            'id' => Str::uuid(),
+            'honorific_title' => $tempUser->honorific_title,
+            'first_name' => $tempUser->first_name,
+            'last_name' => $tempUser->last_name,
+            'gender' => $tempUser->gender,
+            'date_of_birth' => $tempUser->date_of_birth,
+            'email' => $tempUser->email,
+            'phone_number' => $tempUser->phone_number,
+            'nationality' => $tempUser->nationality,
+            'country_of_residence' => $tempUser->country_of_residence,
+            'city' => $tempUser->city,
+            'postal_code' => $tempUser->postal_code,
+            'password' => $tempUser->password, // already hashed in Step 4
+        ]);
+
+        // Delete temp record
+        $tempUser->delete();
+
+        return response()->json([
+            'message' => 'Registration complete. User created.',
+            'token' => "token-data",
+        ]);
+    }
 
 }
