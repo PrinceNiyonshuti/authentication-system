@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Http\Controllers\Controller;
+use App\Data\AddressData;
 use App\Models\TemporaryUser;
 use App\Data\PersonalInfoData;
 use libphonenumber\PhoneNumberUtil;
+use App\Http\Controllers\Controller;
 use libphonenumber\PhoneNumberFormat;
+use App\Http\Requests\Step2AddressRequest;
 use App\Http\Requests\Step1PersonalInfoRequest;
 
 class RegistrationController extends Controller
@@ -46,5 +48,39 @@ class RegistrationController extends Controller
             'registration_id' => $user->id,
             'current_step' => $user->current_step,
         ], 201);
+    }
+
+    public function step2(Step2AddressRequest $request)
+    {
+        $dto = AddressData::from($request->validated());
+
+        $user = TemporaryUser::findOrFail($request->registration_id);
+
+        // Ensure step 1 was completed
+        if ($user->current_step !== 1) {
+            return response()->json([
+                'message' => 'You must complete Step 1 before proceeding.'
+            ], 400);
+        }
+
+        $isExpat = strtoupper($dto->country_of_residence) !== strtoupper($user->nationality);
+
+        $user->update([
+            'country_of_residence' => $dto->country_of_residence,
+            'city' => $dto->city,
+            'city' => $dto->city,
+            'postal_code' => $dto->postal_code,
+            'apartment_name' => $dto->apartment_name,
+            'room_number' => $dto->room_number,
+            'is_expatriate' => $isExpat,
+            'current_step' => 2,
+        ]);
+
+        return response()->json([
+            'message' => 'Step 2 completed',
+            'registration_id' => $user->id,
+            'current_step' => $user->current_step,
+            'is_expatriate' => $user->is_expatriate,
+        ], 200);
     }
 }
