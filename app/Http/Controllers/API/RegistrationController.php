@@ -216,15 +216,16 @@ class RegistrationController extends Controller
     }
 
 
-
     public function step5_confirm(Request $request)
-    {
-        $request->validate([
-            'registration_id' => 'required|uuid|exists:temporary_users,id'
-        ]);
+{
+    $request->validate([
+        'registration_id' => 'required|uuid|exists:temporary_users,id',
+    ]);
 
+    try {
         $tempUser = TemporaryUser::findOrFail($request->registration_id);
 
+        // Ensure registration is at the last step and password is set
         if ($tempUser->current_step !== 4 || !$tempUser->password) {
             return response()->json([
                 'message' => 'Complete all steps before final submission.'
@@ -245,16 +246,28 @@ class RegistrationController extends Controller
             'country_of_residence' => $tempUser->country_of_residence,
             'city' => $tempUser->city,
             'postal_code' => $tempUser->postal_code,
-            'password' => $tempUser->password, // already hashed in Step 4
+            'password' => $tempUser->password, // already hashed
         ]);
 
-        // Delete temp record
-        $tempUser->delete();
+        // Remove temporary user
+        $tempUser->forceDelete();
+
+        // Create Sanctum token
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Registration complete. User created.',
-            'token' => "token-data",
-        ]);
+            'message' => 'Registration complete.',
+            'token' => $token,
+            'token_type' => 'Bearer',
+        ], 201);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Something went wrong during confirmation.',
+            'error' => $e->getMessage(),
+        ], 500);
     }
+}
+
 
 }
