@@ -77,7 +77,14 @@ php artisan migrate
 php artisan serve
 ```
 
----
+## Technologies Used
+
+- **Laravel 12** (API-only setup)  
+- **Sanctum** for API authentication  
+- **PostgreSQL** with UUID primary keys  
+- **libphonenumber** for phone validation  
+- **Rate Limiting** via Laravel’s `RateLimiter`  
+- **Mail Templates** with Blade views (OTP delivery) 
 
 ## Features Overview
 
