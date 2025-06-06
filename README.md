@@ -19,6 +19,7 @@ This project is a secure, API-only Laravel 12 backend for a user authentication 
 - Composer
 - PostgreSQL
 - Laravel 12
+- Mailtrap account [https://mailtrap.io/]
 
 ### Clone the Repository
 
@@ -46,9 +47,22 @@ Edit `.env` to match your PostgreSQL configuration:
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
 DB_PORT=5432
-DB_DATABASE=your_database
-DB_USERNAME=your_user
-DB_PASSWORD=your_password
+DB_DATABASE=authentication_system
+DB_USERNAME=<your_pgsql_username>
+DB_PASSWORD=<your_pgsql_password>
+```
+
+Edit `.env` to match your MailTrap configuration:
+
+```env
+MAIL_MAILER=log
+MAIL_MAILER=smtp
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=<your_mailtrap_username>
+MAIL_PASSWORD=<your_mailtrap_password>
+MAIL_ENCRYPTION=tls
+MAIL_FROM_NAME="${APP_NAME}"
 ```
 
 ### Run Migrations
